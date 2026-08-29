@@ -1,0 +1,17 @@
+{
+  "name": "tilmach-stats",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Tilmach 活跃度统计后台 (Cloudflare Worker + D1)",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "init-db": "wrangler d1 execute tilmach-stats --remote --file=./schema.sql",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260828.1",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.127.1"
+  }
+}

@@ -1,0 +1,57 @@
+# Cloudflare Worker + D1 —— Tilmach 活跃度统计后台
+#
+# ════════ 部署步骤 (第一次) ════════
+#
+# 1. 装 wrangler 并登录:
+#      npm i -g wrangler
+#      wrangler login
+#
+# 2. 建 D1 数据库, 把返回的 database_id 填到下面:
+#      wrangler d1 create tilmach-stats
+#
+# 3. 建表:
+#      wrangler d1 execute tilmach-stats --remote --file=./schema.sql
+#
+# 4. 设两个密钥 (不要写进这个文件, 它会进 git):
+#      wrangler secret put DASH_PASSWORD    # 打开后台页面用的密码
+#      wrangler secret put APP_TAG          # 和 App 里的 TILMACH_TELEMETRY_TAG 一致
+#
+# 5. 部署:
+#      wrangler deploy
+#
+# 6. 把 wrangler 输出的地址填进 App 的构建命令:
+#      flutter build apk --release --target-platform android-arm64 \
+#        --dart-define=TILMACH_TELEMETRY_URL=https://tilmach-stats.<你的子域>.workers.dev/v1/ping \
+#        --dart-define=TILMACH_TELEMETRY_TAG=<和上面 APP_TAG 相同的值>
+#
+#    不传 TILMACH_TELEMETRY_URL 就编出一个完全不含统计功能的版本 (连本地计数都不做)。
+#
+# ════════ 免费额度 ════════
+# Worker 请求 10 万/天, D1 存储 5GB、读 500 万行/天。
+# 按每个安装每天上报一次算, 够几万用户用到天荒地老。
+
+name = "tilmach-stats"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+
+# 后台页面和上报接口都在同一个 Worker 上:
+#   POST /v1/ping   上报 (公开, 靠 APP_TAG 过滤无关流量)
+#   GET  /          后台页面 (HTTP Basic 认证)
+#   GET  /api/stats 后台用的 JSON 接口 (同样需要认证)
+
+# 绑定自定义域名。workers.dev 的域名在国内访问不了, 所以关掉它, 只走自己的域名。
+# custom_domain = true 让 wrangler 自动在 xamal.top 这个 zone 里建好 DNS 记录和证书。
+workers_dev = false
+preview_urls = false
+
+[[routes]]
+pattern = "lg.xamal.top"
+custom_domain = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tilmach-stats"
+database_id = "33bddc56-e4dd-4e90-8588-dfa2b91e8424"
+
+[observability]
+enabled = true

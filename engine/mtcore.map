@@ -1,0 +1,20 @@
+/* 只导出 mt_core 的公开 ABI。
+ *
+ * 不加这个的话, 静态链进来的 llama.cpp / ggml 会把 5000+ 个符号一起塞进
+ * libmtcore.so 的动态符号表 —— 既浪费体积和加载时间, 也有和宿主进程里
+ * 其他 native 库撞符号的风险 (App 里如果还有别的 .so 也链了 ggml 就会打架)。
+ */
+{
+  global:
+    mt_init;
+    mt_translate;
+    mt_free;
+    mt_last_error;
+    mt_engine_info;
+    mt_params_default;
+    mt_n_ctx;
+    mt_n_threads;
+    mt_uses_embedded_template;
+  local:
+    *;
+};

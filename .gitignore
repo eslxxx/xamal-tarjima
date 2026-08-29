@@ -1,0 +1,50 @@
+# 模型权重与下载产物
+models/*.gguf
+models/*.apk
+models/*.part
+out/
+
+# 构建产物
+engine/build*/
+engine/third_party/llama.cpp/
+app/build/
+app/android/build/
+app/android/app/build/
+app/android/.kotlin/
+**/.cxx/
+**/*.so
+**/*.a
+**/*.xcframework/
+
+# Flutter / Dart
+app/.dart_tool/
+app/.flutter-plugins*
+app/ios/Pods/
+app/android/local.properties
+app/android/.gradle/
+
+# Cloudflare Worker
+backend/node_modules/
+backend/.wrangler/
+backend/.dev.vars
+backend/.secrets.env
+backend/.cf.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# 签名密钥 —— 绝对不能进版本库。
+# keystore 一旦丢失, 已上架的应用就再也无法发布更新, 必须单独离线备份。
+keystore/
+app/android/key.properties
+*.jks
+*.p12
+*.keystore
+
+# 编辑器 / 系统
+.idea/
+.vscode/
+Thumbs.db
+desktop.ini
