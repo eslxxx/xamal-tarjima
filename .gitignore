@@ -1,5 +1,7 @@
-# 模型权重与下载产物
+# 模型权重与下载产物。.orig 是归一化类型号之前的原始下载件, 441MB ——
+# 超过 GitHub 单文件 100MB 上限, 而且用户自己会从 ModelScope / HF 下载。
 models/*.gguf
+models/*.gguf.orig
 models/*.apk
 models/*.part
 out/
@@ -23,10 +25,12 @@ app/ios/Pods/
 app/android/local.properties
 app/android/.gradle/
 
-# Cloudflare Worker
-backend/node_modules/
-backend/.wrangler/
-backend/.dev.vars
+# Node —— backend/、site/、tools/shot/ 三处都有
+node_modules/
+
+# Cloudflare Worker (backend/ 统计后台 与 site/ 下载页)
+**/.wrangler/
+**/.dev.vars
 backend/.secrets.env
 backend/.cf.env
 

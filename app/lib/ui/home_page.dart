@@ -10,6 +10,7 @@ import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../core/app_info.dart';
 import '../core/app_settings.dart';
 import '../core/engine.dart';
 import '../core/history_store.dart';
@@ -20,7 +21,7 @@ import '../core/telemetry.dart';
 import '../core/translation_cache.dart';
 import 'cards.dart';
 import 'hero_image.dart';
-import 'settings_page.dart';
+import 'settings_home_page.dart';
 import 'sheets.dart';
 import 'theme.dart';
 import 'widgets.dart';
@@ -369,7 +370,7 @@ class _HomePageState extends State<HomePage>
 
   void _openSettings() {
     Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => SettingsPage(
+      builder: (_) => SettingsHomePage(
         manager: widget.manager,
         onModelDeleted: widget.onModelDeleted,
       ),
@@ -540,23 +541,27 @@ class _HomePageState extends State<HomePage>
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('翻译',
-                        style: TextStyle(
-                            fontSize: 34,
-                            fontWeight: FontWeight.w700,
-                            height: 1.1,
-                            color: T.textPrimary)),
-                    const SizedBox(height: 8),
-                    Text('科技连接世界 · 语言沟通未来',
-                        style: TextStyle(
-                            fontSize: 13,
-                            color: T.textSecondary.withValues(alpha: 0.95))),
-                  ],
+                // Expanded: 名字比原来的「翻译」长得多, 不给它一个上限的话
+                // 窄屏上会把右边的设置按钮挤出屏幕
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(kAppName,
+                          style: TextStyle(
+                              fontSize: 27,
+                              fontWeight: FontWeight.w700,
+                              height: 1.1,
+                              color: T.textPrimary)),
+                      const SizedBox(height: 8),
+                      Text('科技连接世界 · 语言沟通未来',
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: T.textSecondary.withValues(alpha: 0.95))),
+                    ],
+                  ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
                 HexButton(onTap: _openSettings),
               ],
             ),

@@ -12,14 +12,28 @@
 # 3. 建表:
 #      wrangler d1 execute tilmach-stats --remote --file=./schema.sql
 #
-# 4. 设两个密钥 (不要写进这个文件, 它会进 git):
-#      wrangler secret put DASH_PASSWORD    # 打开后台页面用的密码
+# 4. 建 KV 命名空间存运营位的图片, 把返回的 id 填到下面的 kv_namespaces:
+#      wrangler kv namespace create IMG
+#
+#    (为什么用 KV 而不是 R2: 横幅图是"很少改、很多人读", KV 的读会被边缘缓存,
+#     免费额度 1GB 存储 / 10 万次读每天, 而且不需要给账号绑付款方式。)
+#
+# 5. 设两个密钥 (不要写进这个文件, 它会进 git):
+#      wrangler secret put DASH_PASSWORD    # 打开后台页面用的**初始**密码
 #      wrangler secret put APP_TAG          # 和 App 里的 TILMACH_TELEMETRY_TAG 一致
 #
-# 5. 部署:
+#    DASH_PASSWORD 之后可以在后台的「账号」标签页里改, 改过的密码存在 D1 的
+#    config 表里 (存的是用 DASH_PASSWORD 当密钥的 HMAC, 不是明文)。因此:
+#      - 忘了密码 → 删掉那一行就回到 DASH_PASSWORD:
+#          wrangler d1 execute tilmach-stats --remote \
+#            --command "DELETE FROM config WHERE k='dash_password'"
+#      - **别随手换 DASH_PASSWORD** —— 它同时是那串哈希的密钥, 换了会让改过的
+#        密码一起作废, 只能用上面这条命令回到新的初始密码。
+#
+# 6. 部署:
 #      wrangler deploy
 #
-# 6. 把 wrangler 输出的地址填进 App 的构建命令:
+# 7. 把 wrangler 输出的地址填进 App 的构建命令:
 #      flutter build apk --release --target-platform android-arm64 \
 #        --dart-define=TILMACH_TELEMETRY_URL=https://tilmach-stats.<你的子域>.workers.dev/v1/ping \
 #        --dart-define=TILMACH_TELEMETRY_TAG=<和上面 APP_TAG 相同的值>
@@ -35,9 +49,12 @@ main = "src/index.ts"
 compatibility_date = "2026-08-01"
 
 # 后台页面和上报接口都在同一个 Worker 上:
-#   POST /v1/ping   上报 (公开, 靠 APP_TAG 过滤无关流量)
-#   GET  /          后台页面 (HTTP Basic 认证)
-#   GET  /api/stats 后台用的 JSON 接口 (同样需要认证)
+#   POST /v1/ping     上报 (公开, 靠 APP_TAG 过滤无关流量)
+#   GET  /v1/config   App 拉运营位横幅和最新版本 (公开, 边缘缓存 30 分钟)
+#   GET  /img/<id>    横幅图片 (公开, 长缓存)
+#   GET  /            后台页面 (密码登录, cookie 会话)
+#   GET  /api/stats   后台用的 JSON 接口
+#   /admin/*          后台的写操作 (上传/删除横幅、发布版本、改密码)
 
 # 绑定自定义域名。workers.dev 的域名在国内访问不了, 所以关掉它, 只走自己的域名。
 # custom_domain = true 让 wrangler 自动在 xamal.top 这个 zone 里建好 DNS 记录和证书。
@@ -52,6 +69,12 @@ custom_domain = true
 binding = "DB"
 database_name = "tilmach-stats"
 database_id = "33bddc56-e4dd-4e90-8588-dfa2b91e8424"
+
+# 运营位横幅的图片本体。`wrangler kv namespace create IMG` 之后把 id 填进来。
+# 本地 `wrangler dev` 用 miniflare 模拟, 不需要真的 id 也能跑。
+[[kv_namespaces]]
+binding = "IMG"
+id = "95980b75fc084262bd44483cf025f0d0"
 
 [observability]
 enabled = true

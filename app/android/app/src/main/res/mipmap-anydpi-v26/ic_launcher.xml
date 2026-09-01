@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 自适应图标。minSdk=26, 所以这是所有设备实际用的那一份;
+     mipmap-*/ic_launcher.png 只留给应用商店列表和个别老启动器。
+     由 tools/make_icon.py 生成, 不要手改。 -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@mipmap/ic_launcher_background"/>
+    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+</adaptive-icon>

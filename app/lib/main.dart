@@ -1,8 +1,9 @@
-// Tilmach — 离线维吾尔语 · 哈萨克语 · 汉语互译
+// XAMAL离线翻译 (代号 Tilmach) — 离线维吾尔语 · 哈萨克语 · 汉语互译
 //
 // 模型: 腾讯混元 Hy-MT1.5-1.8B 1.25bit (Sherry 三值量化) + llama.cpp STQ1_0 kernel
-// 翻译全程在本机 CPU 上完成。首次启动需要下载 440MB 模型;
-// 之后只有匿名使用统计会联网 (可在设置里关闭), 原文和译文不出设备。
+// 翻译全程在本机 CPU 上完成, 原文和译文不出设备。首次启动需要下载 440MB 模型。
+// 之后会联网的只有三件事, 都不影响翻译本身: 设置页的运营横幅、检查新版本、
+// 匿名使用统计 (可关闭)。逐条说明见 ui/about_page.dart。
 
 import 'dart:io';
 
@@ -11,9 +12,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'core/app_info.dart';
 import 'core/app_settings.dart';
 import 'core/history_store.dart';
 import 'core/model_manager.dart';
+import 'core/remote_config.dart';
 import 'core/telemetry.dart';
 import 'core/translation_cache.dart';
 import 'ui/app_shell.dart';
@@ -37,14 +40,16 @@ Future<void> main() async {
   await AppSettings.instance.load(File('${support.path}/settings.json'));
 
   // 活跃度统计: 只为判断这个免费 App 还值不值得继续维护。
-  // 采集内容见 telemetry.dart 顶部说明; 用户可在设置里关闭。
-  await Telemetry.instance.init(
-    File('${support.path}/telemetry.json'),
-    enabled: AppSettings.instance.telemetry,
-  );
+  // 采集内容见 telemetry.dart 顶部说明, 界面上没有开关 —— 要编一个不带统计的
+  // 版本就把 TILMACH_TELEMETRY_URL 留空 (tools/build_apk.sh 里有说明)。
+  await Telemetry.instance.init(File('${support.path}/telemetry.json'));
   Telemetry.instance.recordLaunch();
   // 启动时不立刻上报, 等界面稳定下来再说 —— 首屏要留给模型加载
   Future<void>.delayed(const Duration(seconds: 20), Telemetry.instance.flush);
+
+  // 运营横幅 + 版本信息。init 里只 await 读磁盘, 网络请求是后台发的 ——
+  // 拉不到就继续用上次的, 界面不等网络。
+  await RemoteConfig.instance.init(Directory('${support.path}/remote'));
 
   runApp(TilmachApp(manager: manager));
 }
@@ -73,7 +78,7 @@ class TilmachApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '翻译',
+      title: kAppName,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,

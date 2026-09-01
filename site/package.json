@@ -1,0 +1,16 @@
+{
+  "name": "xamal-download",
+  "private": true,
+  "version": "1.0.0",
+  "description": "XAMAL离线翻译 下载页 (Cloudflare Worker, logat.xamal.top)",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260828.1",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.127.1"
+  }
+}

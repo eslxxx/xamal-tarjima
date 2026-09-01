@@ -1,0 +1,24 @@
+# XAMAL 下载页 Worker —— logat.xamal.top
+#
+# 一个 Worker 顶整个下载站: 页面、图标、二维码全部内联在代码里,
+# 没有 D1 / KV / 静态资产绑定。改版本号 → 改 src/page.ts 顶部的 SITE →
+# 在 site/ 下 `npx wrangler deploy`。
+#
+# 图片资产由 tools/make_site_icon.py 生成进 src/icon.ts (不要手改那个文件)。
+#
+# workers.dev 域名在国内访问不了, 和后台一样关掉只走自定义域名;
+# custom_domain = true 会在 xamal.top zone 里自动建好 DNS 和证书。
+
+name = "xamal-download"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+
+workers_dev = false
+preview_urls = false
+
+[[routes]]
+pattern = "logat.xamal.top"
+custom_domain = true
+
+[observability]
+enabled = true

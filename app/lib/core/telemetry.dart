@@ -15,6 +15,12 @@
 ///   IMEI / Android ID / 任何硬件标识;
 ///   地理位置、机型、系统版本 —— 用户基数小的时候这些组合起来能反推到个人。
 ///
+/// ## 界面上没有开关
+///   以前设置页有个「发送匿名使用统计」开关, 已经去掉了: 摆一个开关反而暗示
+///   App 在收集什么值得关掉的东西, 而上面这几行才是重点。唯一的开关是编译期的
+///   TILMACH_TELEMETRY_URL —— 留空就编出一个连本地计数都不记的版本。
+///   采集内容仍然在「关于」页里逐条写明, 不做无声采集。
+///
 /// ## 为什么不做事件队列
 ///   客户端只保留一个「最近 60 天的按天计数」窗口, 每次上报把这些天的**绝对值**
 ///   整体发给服务端 upsert。于是:
@@ -27,6 +33,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+
+import 'app_info.dart';
 
 /// 本地保留多少天的计数。超出的丢弃 —— 服务端已经有了, 客户端不需要留档。
 const int _retainDays = 60;
@@ -76,11 +84,10 @@ class Telemetry {
   DateTime? _lastFlush;
   bool _flushing = false;
 
-  /// 由 AppSettings 控制; 用户关掉之后既不上报也不再本地累加。
-  bool enabled = true;
-
   String get installId => _installId ?? '';
 
+  /// 唯一的开关就是编译期那个 URL —— 界面上没有开关了。
+  /// 想要一个完全不带统计的版本就 `TILMACH_BASE= tools/build_apk.sh`。
   bool get _configured => endpoint.isNotEmpty;
 
   static String _today() {
@@ -103,9 +110,8 @@ class Telemetry {
 
   // ── 本地状态 ────────────────────────────────────────────
 
-  Future<void> init(File file, {required bool enabled}) async {
+  Future<void> init(File file) async {
     _file = file;
-    this.enabled = enabled;
     try {
       if (await file.exists()) {
         final raw = jsonDecode(await file.readAsString());
@@ -129,13 +135,13 @@ class Telemetry {
   }
 
   void recordLaunch() {
-    if (!enabled || !_configured) return;
+    if (!_configured) return;
     (_days[_today()] ??= _DayCount()).launches++;
     _save();
   }
 
   void recordTranslation() {
-    if (!enabled || !_configured) return;
+    if (!_configured) return;
     (_days[_today()] ??= _DayCount()).translations++;
     // 翻译很频繁, 不每次写盘; 靠 flush / 生命周期 pause 时落盘
   }
@@ -160,21 +166,14 @@ class Telemetry {
     } catch (_) {}
   }
 
-  /// 用户在设置里关掉统计: 停止累加, 并清掉本地已攒的数据。
-  Future<void> disableAndPurge() async {
-    enabled = false;
-    _days.clear();
-    await _save();
-  }
-
   // ── 上报 ────────────────────────────────────────────────
   //
   // 每次把本地保留的所有天数的**绝对值**整体发过去, 服务端 upsert。
   // 所以重复上报没有副作用, 失败了也不用记账 —— 下次连上网自然补齐。
 
-  /// [force] 用于「立即上报」这类手动触发, 跳过最小间隔限制。
+  /// [force] 保留给以后可能的手动触发; 目前只有生命周期和启动延迟会调 flush()。
   Future<bool> flush({bool force = false}) async {
-    if (!enabled || !_configured || _flushing) return false;
+    if (!_configured || _flushing) return false;
     if (_days.isEmpty) return false;
     if (!force && _lastFlush != null &&
         DateTime.now().difference(_lastFlush!) < _minInterval) {
@@ -185,12 +184,12 @@ class Telemetry {
     await _save(); // 先落盘, 万一上报过程中进程被杀也不丢
     final client = HttpClient()
       ..connectionTimeout = const Duration(seconds: 10)
-      ..userAgent = 'Tilmach/$_appVersion';
+      ..userAgent = 'Tilmach/$kAppVersion';
     try {
       final body = jsonEncode({
         'tag': appTag,
         'install_id': _installId,
-        'app_version': _appVersion,
+        'app_version': kAppVersion,
         'days': [
           for (final e in _days.entries)
             {'day': e.key, 'launches': e.value.launches, 'translations': e.value.translations},
@@ -211,19 +210,6 @@ class Telemetry {
       client.close(force: true);
       _flushing = false;
     }
-  }
-
-  /// 版本号。与 pubspec 的 version 保持一致; 改版本时记得同步。
-  static const String _appVersion = '1.0.0';
-
-  /// 设置页展示用: 本地还有多少天的数据、最近一次上报成功是什么时候。
-  int get pendingDays => _days.length;
-  DateTime? get lastFlushAt => _lastFlush;
-
-  /// 当天计数, 给设置页显示"你今天用了几次"。
-  ({int launches, int translations}) get today {
-    final d = _days[_today()] ?? _DayCount();
-    return (launches: d.launches, translations: d.translations);
   }
 
   /// 生命周期 pause 时调用: 落盘 + 顺手尝试上报。

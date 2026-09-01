@@ -40,18 +40,9 @@ class AppSettings extends ChangeNotifier {
     _save();
   }
 
-  /// 是否上传匿名活跃度统计。
-  ///
-  /// 采集内容仅限: 随机安装 ID、每天的启动/翻译次数、app 版本。
-  /// 不含 IP、位置、硬件标识, 也不含任何原文或译文。
-  bool _telemetry = true;
-  bool get telemetry => _telemetry;
-  set telemetry(bool v) {
-    if (_telemetry == v) return;
-    _telemetry = v;
-    notifyListeners();
-    _save();
-  }
+  // 活跃度统计没有开关。它是不是启用只由编译期的 TILMACH_TELEMETRY_URL 决定
+  // (见 telemetry.dart), 界面上不出现 —— 之前那个「发送匿名使用统计」开关反而
+  // 让人以为 App 在收集什么值得关掉的东西。采集内容仍然在「关于」里写明。
 
   Future<void> load(File file) async {
     _file = file;
@@ -61,7 +52,6 @@ class AppSettings extends ChangeNotifier {
       if (raw is! Map) return;
       _officialSampling = raw['officialSampling'] == true;
       _keepHistory = raw['keepHistory'] != false; // 缺省为 true
-      _telemetry = raw['telemetry'] != false;       // 缺省为 true
       notifyListeners();
     } catch (_) {
       // 设置坏了用默认值, 不该让 App 起不来
@@ -76,7 +66,6 @@ class AppSettings extends ChangeNotifier {
       await f.writeAsString(jsonEncode({
         'officialSampling': _officialSampling,
         'keepHistory': _keepHistory,
-        'telemetry': _telemetry,
       }));
     } catch (_) {}
   }

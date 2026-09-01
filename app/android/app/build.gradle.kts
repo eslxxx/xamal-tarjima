@@ -55,6 +55,17 @@ android {
             // libmtcore.so 需要以真实文件形式落到 APK 里, 不能被压缩后再解 ——
             // 我们靠 System.loadLibrary 直接加载。
             useLegacyPackaging = false
+
+            // abiFilters 管不住来自依赖 AAR 的 .so: 之前的包里漏进了
+            // lib/armeabi-v7a/libdartjni.so 和 lib/x86_64/libdartjni.so。
+            // 只要这两个目录存在, Android 就认为这个 APK 支持 32 位 ARM 和 x86_64,
+            // 于是能装到那种手机上 —— 但 libflutter.so / libmtcore.so 只有 arm64 一份,
+            // 一启动就崩。宁可让系统直接拒绝安装, 也别装上去闪退。
+            excludes += setOf(
+                "lib/armeabi-v7a/**", "lib/armeabi/**",
+                "lib/x86/**", "lib/x86_64/**",
+                "lib/mips/**", "lib/mips64/**", "lib/riscv64/**",
+            )
         }
     }
 

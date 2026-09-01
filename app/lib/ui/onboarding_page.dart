@@ -9,6 +9,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../core/app_info.dart';
 import '../core/model_manager.dart';
 import 'hero_image.dart';
 import 'theme.dart';
@@ -100,9 +101,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text('翻译',
+                    const Text(kAppName,
                         style: TextStyle(
-                            fontSize: 34,
+                            fontSize: 27,
                             fontWeight: FontWeight.w700,
                             color: T.textPrimary)),
                     const SizedBox(height: 8),
@@ -114,7 +115,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     _buttons(busy),
                     const SizedBox(height: 10),
                     const Text(
-                      '模型由腾讯混元开源，本应用免费且不含广告。\n翻译全程在本机完成，不上传原文或译文；\n仅发送匿名使用次数统计，可在设置中关闭。',
+                      // 不写"仅发送统计"了 —— 设置页的横幅和版本检查也会联网,
+                      // 联网的事一条条写在「关于」里。
+                      '模型由腾讯混元开源，本应用免费且不含广告。\n翻译全程在本机完成，不上传原文或译文；\n联网详情见「关于」。',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           fontSize: 11.5, height: 1.6, color: T.textTertiary),
