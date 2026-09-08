@@ -39,14 +39,24 @@ jobs:
         echo "\n=== iOS project ==="
         ls -la app/ios/
     
-    - name: Build iOS App (no codesign, skip engine for now)
+    - name: Configure iOS project for unsigned build
+      run: |
+        cd app/ios
+        # 禁用自动签名，允许无签名构建
+        sed -i '' 's/ENABLE_BITCODE = YES/ENABLE_BITCODE = NO/g' Runner.xcodeproj/project.pbxproj || true
+        sed -i '' 's/CODE_SIGN_IDENTITY = .*/CODE_SIGN_IDENTITY = "";/g' Runner.xcodeproj/project.pbxproj || true
+        sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' Runner.xcodeproj/project.pbxproj || true
+        echo "iOS project configured for manual signing"
+    
+    - name: Build iOS App (without signing)
       run: |
         cd app
-        # 先尝试直接构建，看看是否真的需要编译引擎
-        flutter build ios --release --no-codesign \
+        # 不使用 --no-codesign，而是配置 Xcode 跳过签名
+        flutter build ios --release \
           --dart-define=TILMACH_TELEMETRY_URL="" \
           --dart-define=TILMACH_TELEMETRY_TAG="" \
-          --dart-define=TILMACH_CONFIG_URL="" || echo "Build failed as expected (missing engine)"
+          --dart-define=TILMACH_CONFIG_URL="" \
+          || echo "Build failed as expected (missing engine library)"
     
     - name: Report
       if: always()
