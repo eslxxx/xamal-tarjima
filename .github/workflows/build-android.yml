@@ -1,0 +1,104 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.13.0'
+        channel: 'stable'
+    
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake ninja-build
+    
+    - name: Setup Android NDK
+      run: |
+        echo "ANDROID_NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> $GITHUB_ENV
+        echo "ANDROID_NDK=$ANDROID_NDK_LATEST_HOME" >> $GITHUB_ENV
+    
+    - name: Build Android Engine (C++)
+      run: |
+        cd engine
+        mkdir -p build-android
+        cd build-android
+        
+        # 配置 CMake for Android
+        cmake .. \
+          -G Ninja \
+          -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+          -DANDROID_ABI=arm64-v8a \
+          -DANDROID_PLATFORM=android-26 \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16
+        
+        # 编译
+        cmake --build . -j$(nproc)
+        
+        # 检查生成的库
+        echo "=== Built libraries ==="
+        find . -name "*.so"
+    
+    - name: Copy library to jniLibs
+      run: |
+        mkdir -p app/android/app/src/main/jniLibs/arm64-v8a
+        cp engine/build-android/libmtcore.so app/android/app/src/main/jniLibs/arm64-v8a/
+        ls -lh app/android/app/src/main/jniLibs/arm64-v8a/
+    
+    - name: Create backend secrets (dummy for offline build)
+      run: |
+        mkdir -p backend
+        echo "APP_TAG=github_actions_build" > backend/.secrets.env
+    
+    - name: Flutter dependencies
+      run: |
+        cd app
+        flutter pub get
+    
+    - name: Build APK
+      run: |
+        cd app
+        flutter build apk --release \
+          --target-platform android-arm64 \
+          --dart-define=TILMACH_TELEMETRY_URL="" \
+          --dart-define=TILMACH_TELEMETRY_TAG="" \
+          --dart-define=TILMACH_CONFIG_URL=""
+    
+    - name: Upload APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: android-apk
+        path: app/build/app/outputs/flutter-apk/app-release.apk
+        retention-days: 7
+    
+    - name: Debug info on failure
+      if: failure()
+      run: |
+        echo "=== Engine build output ==="
+        ls -la engine/build-android/ || echo "No build output"
+        echo "=== jniLibs ==="
+        ls -la app/android/app/src/main/jniLibs/ || echo "No jniLibs"
+        echo "=== Flutter build output ==="
+        ls -la app/build/ || echo "No build output"
