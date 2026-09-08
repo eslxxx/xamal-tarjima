@@ -38,15 +38,31 @@ if(NOT WIN32)
   target_compile_options(mtcore PRIVATE -fvisibility=hidden)
   # -fvisibility 只管本目标的编译单元; 静态链进来的 llama/ggml 目标文件
   # 仍会导出自己的符号, 所以还要一份 version script 在链接期收口。
-  target_link_options(mtcore PRIVATE
-    "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/mtcore.map")
-  set_target_properties(mtcore PROPERTIES LINK_DEPENDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/mtcore.map")
+  # iOS 用的是 exported_symbols_list 而不是 version script
+  if(NOT IOS)
+    target_link_options(mtcore PRIVATE
+      "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/mtcore.map")
+    set_target_properties(mtcore PROPERTIES LINK_DEPENDS
+      "${CMAKE_CURRENT_SOURCE_DIR}/mtcore.map")
+  else()
+    # iOS 使用导出符号列表 (如果需要的话可以创建 mtcore.exp)
+    # target_link_options(mtcore PRIVATE "-Wl,-exported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/mtcore.exp")
+  endif()
 endif()
 if(ANDROID)
   target_link_libraries(mtcore PRIVATE log)
   # 静态链 libc++, 免得 APK 里再带一份 libc++_shared.so
   target_link_options(mtcore PRIVATE -static-libstdc++)
+endif()
+if(IOS)
+  # iOS 特定配置
+  set_target_properties(mtcore PROPERTIES
+    FRAMEWORK TRUE
+    MACOSX_FRAMEWORK_IDENTIFIER com.tilmach.mtcore
+    VERSION 1.0.0
+    SOVERSION 1.0.0
+    PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/include/mt_core.h"
+  )
 endif()
 
 # ---- mt_cli: 冒烟测试用的命令行工具, adb push 到真机跑 ----
