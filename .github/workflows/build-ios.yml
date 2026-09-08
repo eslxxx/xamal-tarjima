@@ -23,46 +23,90 @@ jobs:
         flutter-version: '3.13.0'
         channel: 'stable'
     
-    - name: Install dependencies
+    - name: Install build dependencies
+      run: |
+        brew install cmake
+    
+    - name: Build iOS Engine (C++ with llama.cpp)
+      run: |
+        cd engine
+        mkdir -p build-ios
+        cd build-ios
+        
+        # 配置 CMake for iOS
+        cmake .. \
+          -DCMAKE_SYSTEM_NAME=iOS \
+          -DCMAKE_OSX_ARCHITECTURES=arm64 \
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DIOS=ON \
+          -DCMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH=NO
+        
+        # 编译
+        cmake --build . --config Release -j$(sysctl -n hw.ncpu)
+        
+        # 检查生成的库
+        echo "=== Built libraries ==="
+        find . -name "*.dylib" -o -name "*.a" -o -name "*.framework"
+    
+    - name: Prepare iOS Framework
+      run: |
+        cd engine/build-ios
+        # 创建 Frameworks 目录
+        mkdir -p ../../app/ios/Frameworks
+        
+        # 复制编译好的库（根据实际生成的文件调整）
+        if [ -f "libmtcore.dylib" ]; then
+          cp libmtcore.dylib ../../app/ios/Frameworks/
+        elif [ -f "Release/libmtcore.dylib" ]; then
+          cp Release/libmtcore.dylib ../../app/ios/Frameworks/
+        else
+          echo "WARNING: libmtcore.dylib not found, listing all files:"
+          find . -type f
+        fi
+    
+    - name: Flutter dependencies
       run: |
         cd app
         flutter pub get
     
-    - name: Check project structure
-      run: |
-        echo "=== Project structure ==="
-        ls -la
-        echo "\n=== Engine directory ==="
-        ls -la engine/ || echo "No engine dir"
-        echo "\n=== Third party ==="
-        ls -la engine/third_party/ || echo "No third_party dir"
-        echo "\n=== iOS project ==="
-        ls -la app/ios/
-    
-    - name: Configure iOS project for unsigned build
-      run: |
-        cd app/ios
-        # 禁用自动签名，允许无签名构建
-        sed -i '' 's/ENABLE_BITCODE = YES/ENABLE_BITCODE = NO/g' Runner.xcodeproj/project.pbxproj || true
-        sed -i '' 's/CODE_SIGN_IDENTITY = .*/CODE_SIGN_IDENTITY = "";/g' Runner.xcodeproj/project.pbxproj || true
-        sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' Runner.xcodeproj/project.pbxproj || true
-        echo "iOS project configured for manual signing"
-    
-    - name: Build iOS App (without signing)
+    - name: Build iOS App
       run: |
         cd app
-        # 不使用 --no-codesign，而是配置 Xcode 跳过签名
+        # 先尝试构建，看看是否能找到库
         flutter build ios --release \
           --dart-define=TILMACH_TELEMETRY_URL="" \
           --dart-define=TILMACH_TELEMETRY_TAG="" \
           --dart-define=TILMACH_CONFIG_URL="" \
-          || echo "Build failed as expected (missing engine library)"
+          || {
+            echo "=== Build failed, checking Xcode project ==="
+            ls -la ios/Frameworks/ || echo "No Frameworks dir"
+            exit 1
+          }
     
-    - name: Report
-      if: always()
+    - name: Create IPA
+      if: success()
       run: |
-        echo "=== Build attempt completed ==="
-        echo "This is a diagnostic run to understand the build requirements."
-        echo "Next step: we need to either:"
-        echo "1. Find pre-compiled iOS engine libraries"
-        echo "2. Or properly compile llama.cpp for iOS"
+        cd app/build/ios/iphoneos
+        mkdir Payload
+        cp -r Runner.app Payload/
+        zip -r ../Runner.ipa Payload
+        rm -rf Payload
+    
+    - name: Upload IPA
+      if: success()
+      uses: actions/upload-artifact@v3
+      with:
+        name: ios-ipa
+        path: app/build/ios/Runner.ipa
+        retention-days: 7
+    
+    - name: Debug info on failure
+      if: failure()
+      run: |
+        echo "=== CMake build directory ==="
+        ls -la engine/build-ios/ || echo "No build-ios dir"
+        echo "=== iOS Frameworks ==="
+        ls -la app/ios/Frameworks/ || echo "No Frameworks dir"
+        echo "=== Flutter build output ==="
+        ls -la app/build/ios/ || echo "No build output"
