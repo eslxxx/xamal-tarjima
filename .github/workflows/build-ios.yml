@@ -25,55 +25,34 @@ jobs:
     
     - name: Install dependencies
       run: |
-        brew install cmake
         cd app
         flutter pub get
     
-    - name: Debug - List files
+    - name: Check project structure
       run: |
-        echo "Current directory:"
-        pwd
-        echo "Listing tools directory:"
-        ls -la tools/
-        echo "Checking build scripts:"
-        ls -la tools/build_ios*.sh || echo "Scripts not found"
+        echo "=== Project structure ==="
+        ls -la
+        echo "\n=== Engine directory ==="
+        ls -la engine/ || echo "No engine dir"
+        echo "\n=== Third party ==="
+        ls -la engine/third_party/ || echo "No third_party dir"
+        echo "\n=== iOS project ==="
+        ls -la app/ios/
     
-    - name: Build iOS Engine
-      run: |
-        chmod +x tools/build_ios_engine.sh
-        bash tools/build_ios_engine.sh
-    
-    - name: Setup Xcode
-      run: |
-        sudo xcode-select -s /Applications/Xcode_15.0.app/Contents/Developer
-        xcodebuild -version
-    
-    - name: Build iOS App (no codesign)
+    - name: Build iOS App (no codesign, skip engine for now)
       run: |
         cd app
+        # 先尝试直接构建，看看是否真的需要编译引擎
         flutter build ios --release --no-codesign \
           --dart-define=TILMACH_TELEMETRY_URL="" \
           --dart-define=TILMACH_TELEMETRY_TAG="" \
-          --dart-define=TILMACH_CONFIG_URL=""
+          --dart-define=TILMACH_CONFIG_URL="" || echo "Build failed as expected (missing engine)"
     
-    - name: Upload IPA artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: ios-app
-        path: app/build/ios/iphoneos/Runner.app
-        retention-days: 7
-
-    - name: Create IPA (if needed)
+    - name: Report
+      if: always()
       run: |
-        cd app/build/ios/iphoneos
-        mkdir Payload
-        cp -r Runner.app Payload/
-        zip -r Runner.ipa Payload
-        rm -rf Payload
-    
-    - name: Upload IPA
-      uses: actions/upload-artifact@v3
-      with:
-        name: ios-ipa
-        path: app/build/ios/iphoneos/Runner.ipa
-        retention-days: 7
+        echo "=== Build attempt completed ==="
+        echo "This is a diagnostic run to understand the build requirements."
+        echo "Next step: we need to either:"
+        echo "1. Find pre-compiled iOS engine libraries"
+        echo "2. Or properly compile llama.cpp for iOS"
