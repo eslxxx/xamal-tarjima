@@ -26,13 +26,22 @@ jobs:
     - name: Install dependencies
       run: |
         brew install cmake
+        cd app
         flutter pub get
-      working-directory: app
+    
+    - name: Debug - List files
+      run: |
+        echo "Current directory:"
+        pwd
+        echo "Listing tools directory:"
+        ls -la tools/
+        echo "Checking build scripts:"
+        ls -la tools/build_ios*.sh || echo "Scripts not found"
     
     - name: Build iOS Engine
       run: |
         chmod +x tools/build_ios_engine.sh
-        ./tools/build_ios_engine.sh
+        bash tools/build_ios_engine.sh
     
     - name: Setup Xcode
       run: |
