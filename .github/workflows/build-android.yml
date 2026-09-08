@@ -14,8 +14,14 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      with:
-        submodules: recursive
+    
+    - name: Initialize submodules
+      run: |
+        git submodule update --init --recursive
+        echo "=== Submodule status ==="
+        git submodule status
+        echo "=== llama.cpp directory ==="
+        ls -la engine/third_party/llama.cpp/ | head -20
     
     - name: Setup Java
       uses: actions/setup-java@v4
