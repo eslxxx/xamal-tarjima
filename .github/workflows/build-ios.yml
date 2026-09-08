@@ -33,21 +33,22 @@ jobs:
         mkdir -p build-ios
         cd build-ios
         
-        # 配置 CMake for iOS
+        # 配置 CMake for iOS - 使用 Xcode 工具链
         cmake .. \
+          -G Xcode \
           -DCMAKE_SYSTEM_NAME=iOS \
           -DCMAKE_OSX_ARCHITECTURES=arm64 \
           -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
           -DCMAKE_BUILD_TYPE=Release \
-          -DIOS=ON \
-          -DCMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH=NO
+          -DIOS=ON
         
-        # 编译
-        cmake --build . --config Release -j$(sysctl -n hw.ncpu)
+        # 使用 xcodebuild 编译
+        xcodebuild -configuration Release -target mtcore -sdk iphoneos \
+          ARCHS=arm64 ONLY_ACTIVE_ARCH=NO CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
         
         # 检查生成的库
         echo "=== Built libraries ==="
-        find . -name "*.dylib" -o -name "*.a" -o -name "*.framework"
+        find . -name "*.dylib" -o -name "*.a" -o -name "*.framework" | head -20
     
     - name: Prepare iOS Framework
       run: |
