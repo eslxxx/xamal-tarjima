@@ -106,22 +106,6 @@ jobs:
         cd app
         flutter pub get
 
-    - name: Generate Gradle wrapper
-      shell: bash
-      run: |
-        set -euo pipefail
-        test -n "${FLUTTER_ROOT:-}"
-        test -n "${ANDROID_SDK_ROOT:-}"
-        printf 'flutter.sdk=%s\n' "$FLUTTER_ROOT" > app/android/local.properties
-        curl --fail --silent --show-error --location \
-          https://services.gradle.org/distributions/gradle-8.3-bin.zip \
-          --output /tmp/gradle.zip
-        unzip -q /tmp/gradle.zip -d /tmp/gradle
-        /tmp/gradle/gradle-8.3/bin/gradle \
-          --no-daemon -p app/android wrapper --gradle-version 8.3
-        test -s app/android/gradlew
-        test -s app/android/gradle/wrapper/gradle-wrapper.jar
-
     - name: Build APK
       run: |
         cd app
