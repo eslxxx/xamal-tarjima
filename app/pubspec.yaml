@@ -32,7 +32,7 @@ dependencies:
     sdk: flutter
 
   # dart:ffi 的辅助工具 (Utf8 转换 / calloc)
-  ffi: ^2.1.4
+  ffi: ^2.1.3
   # 模型文件存放路径: 安卓 getFilesDir / iOS Application Support
   path_provider: ^2.1.5
   # 模型下载完整性校验 (sha256)
@@ -48,7 +48,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+  flutter_lints: ^4.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
